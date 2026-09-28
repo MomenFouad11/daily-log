@@ -1,0 +1,406 @@
+<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
+<title>السجل اليومي</title>
+<meta name="theme-color" content="#1C232B" />
+<link rel="manifest" href="manifest.json" />
+<link rel="icon" href="icon-192.png" />
+<link rel="apple-touch-icon" href="icon-192.png" />
+<style>
+  * { box-sizing: border-box; }
+  body {
+    margin: 0;
+    background: #1C232B;
+    color: #F0EDE6;
+    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Tahoma, Arial, sans-serif;
+    padding-bottom: 40px;
+  }
+  .wrap { max-width: 480px; margin: 0 auto; padding: 20px 16px; }
+
+  .titleblock { border: 1px solid #3A4452; border-radius: 10px; overflow: hidden; margin-bottom: 20px; }
+  .titleblock-head { display:flex; align-items:center; justify-content:space-between; gap:8px; padding:12px 16px; background:#232B34; font-weight:700; font-size:18px; }
+  .titleblock-grid { display:grid; grid-template-columns:1fr 1fr; font-size:12px; border-top:1px solid #3A4452; color:#8A8F98; }
+  .titleblock-grid > div { padding:8px 16px; }
+  .titleblock-grid > div:first-child { border-left:1px solid #3A4452; }
+  .tb-label { font-size:10px; opacity:0.7; }
+  .tb-value { color:#F0EDE6; }
+  .export-btn { background:none; border:1px solid #3A4452; color:#8A8F98; font-size:11px; padding:4px 10px; border-radius:6px; cursor:pointer; }
+
+  .panel { background:#232B34; border-radius:10px; padding:16px; margin-bottom:20px; }
+  .section-label { font-size:11px; color:#8A8F98; margin-bottom:6px; }
+
+  .tabs { display:flex; gap:8px; overflow-x:auto; padding-bottom:4px; margin-bottom:14px; -webkit-overflow-scrolling:touch; }
+  .tabs::-webkit-scrollbar { height:4px; }
+  .tab { flex-shrink:0; display:flex; align-items:center; gap:5px; padding:7px 12px; border-radius:999px; font-size:13px; background:transparent; cursor:pointer; border:1px solid; color:#F0EDE6; white-space:nowrap; }
+  .tab.active { color:#1C232B; font-weight:700; }
+
+  .input-row { display:flex; gap:8px; align-items:flex-end; }
+  textarea { flex:1; border-radius:8px; padding:10px 12px; font-size:14px; resize:none; background:#1C232B; border:1px solid #3A4452; color:#F0EDE6; font-family:inherit; }
+  textarea:focus { outline: 1px solid #E8A33D; }
+  .mic-btn { flex-shrink:0; width:48px; height:48px; border-radius:999px; display:flex; align-items:center; justify-content:center; background:#E8A33D; border:none; cursor:pointer; color:#1C232B; font-size:20px; }
+  .mic-btn.listening { background:#D4756B; box-shadow: 0 0 0 5px rgba(212,117,107,0.25); animation: pulse 1.4s infinite; }
+  @keyframes pulse { 0%{box-shadow:0 0 0 4px rgba(212,117,107,0.25);} 50%{box-shadow:0 0 0 9px rgba(212,117,107,0.12);} 100%{box-shadow:0 0 0 4px rgba(212,117,107,0.25);} }
+  .mic-btn:disabled { opacity:0.4; cursor:not-allowed; }
+  .mic-status { font-size:12px; margin-top:8px; min-height:16px; color:#8A8F98; }
+  .mic-status.error { color:#D4756B; }
+  .mic-status.ok { color:#4A9B8E; }
+
+  .save-btn { width:100%; margin-top:12px; padding:11px; border-radius:8px; border:none; background:#E8A33D; color:#1C232B; font-weight:700; font-size:14px; cursor:pointer; display:flex; align-items:center; justify-content:center; gap:6px; }
+
+  .filters-panel { background:#232B34; border-radius:10px; padding:14px 16px; margin-bottom:16px; }
+  .filter-row { display:flex; gap:8px; flex-wrap:wrap; margin-bottom:10px; }
+  .filter-row:last-child { margin-bottom:0; }
+  select, input[type="date"] { font-size:12px; border-radius:8px; padding:7px 10px; background:#1C232B; border:1px solid #3A4452; color:#F0EDE6; font-family:inherit; }
+  .date-field { display:flex; align-items:center; gap:6px; font-size:11px; color:#8A8F98; }
+
+  .entries { display:flex; flex-direction:column; gap:12px; }
+  .empty { text-align:center; font-size:14px; padding:40px 10px; color:#8A8F98; border:1px dashed #3A4452; border-radius:10px; }
+
+  .card { background:#232B34; border-radius:10px; overflow:hidden; }
+  .card-head { display:flex; align-items:flex-start; justify-content:space-between; padding:10px 12px 6px; }
+  .cat-badge { font-size:10px; padding:2px 8px; border-radius:999px; font-weight:700; color:#1C232B; white-space:nowrap; }
+  .time { font-size:11px; color:#8A8F98; margin-right:8px; }
+  .status-badge { font-size:10px; padding:2px 8px; border-radius:999px; font-weight:700; border:1.5px solid; transform: rotate(-6deg); }
+  .card-body { padding:8px 12px 8px; font-size:14px; line-height:1.6; border-top:1px dashed #3A4452; margin-top:2px; }
+  .card-actions { display:flex; justify-content:flex-end; gap:16px; padding:0 12px 10px; }
+  .action-btn { display:flex; align-items:center; gap:4px; font-size:12px; background:none; border:none; cursor:pointer; color:#8A8F98; padding:0; }
+  .action-btn.done { color:#4A9B8E; }
+  .action-btn.delete { color:#D4756B; }
+</style>
+</head>
+<body>
+  <div class="wrap">
+    <div class="titleblock">
+      <div class="titleblock-head">
+        <span>📋 السجل اليومي</span>
+        <button class="export-btn" id="exportBtn">⬇ نسخة احتياطية</button>
+      </div>
+      <div class="titleblock-grid">
+        <div><div class="tb-label">التاريخ</div><div class="tb-value" id="todayLabel"></div></div>
+        <div><div class="tb-label">عدد المهام المفتوحة</div><div class="tb-value" id="openCount">0</div></div>
+      </div>
+    </div>
+
+    <div class="panel">
+      <div class="section-label">القسم</div>
+      <div class="tabs" id="catTabs"></div>
+      <div class="input-row">
+        <textarea id="noteInput" rows="2" placeholder="اكتب الملاحظة أو استخدم المايك..."></textarea>
+        <button class="mic-btn" id="micBtn" title="تسجيل صوتي">🎙️</button>
+      </div>
+      <div class="mic-status" id="micStatus">اضغط على المايك وسمح بإذن الميكروفون أول مرة</div>
+      <button class="save-btn" id="saveBtn">＋ حفظ الملاحظة</button>
+    </div>
+
+    <div class="filters-panel">
+      <div class="section-label">فلترة</div>
+      <div class="filter-row" id="filterTabs"></div>
+      <div class="filter-row">
+        <select id="filterStatus">
+          <option value="الكل">كل الحالات</option>
+          <option value="جاري">جاري التنفيذ</option>
+          <option value="تم">تم</option>
+        </select>
+        <div class="date-field">من <input type="date" id="dateFrom" /></div>
+        <div class="date-field">إلى <input type="date" id="dateTo" /></div>
+      </div>
+    </div>
+
+    <div class="entries" id="entriesList"></div>
+  </div>
+
+<script>
+const CATEGORIES = [
+  { id: "To-Do", label: "To-Do", icon: "📝", color: "#E8A33D" },
+  { id: "الشغل", label: "الشغل", icon: "💼", color: "#4A9B8E" },
+  { id: "الصيانة", label: "الصيانة", icon: "🔧", color: "#D4756B" },
+  { id: "الإنتاج", label: "الإنتاج", icon: "🏭", color: "#6B9BD4" },
+  { id: "الماكينات", label: "الماكينات", icon: "⚙️", color: "#B36BD4" },
+  { id: "البيت", label: "البيت", icon: "🏠", color: "#7FB069" },
+  { id: "شخصي", label: "شخصي", icon: "🙋", color: "#5EC8D8" },
+  { id: "الأصحاب", label: "الأصحاب", icon: "👥", color: "#E37B8C" },
+];
+const STORAGE_KEY = "daily-log-entries-v1";
+
+let entries = JSON.parse(localStorage.getItem(STORAGE_KEY) || "[]");
+let category = "الشغل";
+let filterCat = "الكل";
+let filterStatus = "الكل";
+let listening = false;
+let recognition = null;
+let userStoppedManually = false;
+
+function catInfo(name) { return CATEGORIES.find(c => c.id === name); }
+function catColor(name) { const c = catInfo(name); return c ? c.color : "#8A8F98"; }
+
+function fmtTime(ts) {
+  const d = new Date(ts);
+  return d.toLocaleString("ar-EG", { day: "2-digit", month: "2-digit", year: "numeric", hour: "2-digit", minute: "2-digit" });
+}
+
+function save() {
+  localStorage.setItem(STORAGE_KEY, JSON.stringify(entries));
+  render();
+}
+
+function renderCatTabs() {
+  const el = document.getElementById("catTabs");
+  el.innerHTML = "";
+  CATEGORIES.forEach(c => {
+    const btn = document.createElement("button");
+    btn.className = "tab" + (category === c.id ? " active" : "");
+    btn.style.borderColor = c.color;
+    btn.style.background = category === c.id ? c.color : "transparent";
+    btn.innerHTML = `${c.icon} ${c.label}`;
+    btn.onclick = () => { category = c.id; renderCatTabs(); };
+    el.appendChild(btn);
+  });
+}
+
+function renderFilterTabs() {
+  const el = document.getElementById("filterTabs");
+  el.innerHTML = "";
+  const allBtn = document.createElement("button");
+  allBtn.className = "tab" + (filterCat === "الكل" ? " active" : "");
+  allBtn.style.borderColor = "#8A8F98";
+  allBtn.style.background = filterCat === "الكل" ? "#8A8F98" : "transparent";
+  allBtn.textContent = "الكل";
+  allBtn.onclick = () => { filterCat = "الكل"; renderFilterTabs(); render(); };
+  el.appendChild(allBtn);
+
+  CATEGORIES.forEach(c => {
+    const btn = document.createElement("button");
+    btn.className = "tab" + (filterCat === c.id ? " active" : "");
+    btn.style.borderColor = c.color;
+    btn.style.background = filterCat === c.id ? c.color : "transparent";
+    btn.innerHTML = `${c.icon} ${c.label}`;
+    btn.onclick = () => { filterCat = c.id; renderFilterTabs(); render(); };
+    el.appendChild(btn);
+  });
+  el.classList.add("tabs");
+}
+
+function render() {
+  document.getElementById("todayLabel").textContent = new Date().toLocaleDateString("ar-EG", { weekday: "long", day: "2-digit", month: "long" });
+  document.getElementById("openCount").textContent = entries.filter(e => e.status === "جاري").length;
+
+  const dateFrom = document.getElementById("dateFrom").value;
+  const dateTo = document.getElementById("dateTo").value;
+
+  const filtered = entries.filter(e => {
+    if (filterCat !== "الكل" && e.category !== filterCat) return false;
+    if (filterStatus !== "الكل" && e.status !== filterStatus) return false;
+    if (dateFrom) {
+      const from = new Date(dateFrom + "T00:00:00").getTime();
+      if (e.timestamp < from) return false;
+    }
+    if (dateTo) {
+      const to = new Date(dateTo + "T23:59:59").getTime();
+      if (e.timestamp > to) return false;
+    }
+    return true;
+  });
+
+  const list = document.getElementById("entriesList");
+  list.innerHTML = "";
+
+  if (filtered.length === 0) {
+    const empty = document.createElement("div");
+    empty.className = "empty";
+    empty.textContent = "مفيش ملاحظات مطابقة للفلترة دي.";
+    list.appendChild(empty);
+    return;
+  }
+
+  filtered.forEach(e => {
+    const info = catInfo(e.category);
+    const card = document.createElement("div");
+    card.className = "card";
+    card.style.borderRight = `4px solid ${catColor(e.category)}`;
+
+    card.innerHTML = `
+      <div class="card-head">
+        <div>
+          <span class="cat-badge" style="background:${catColor(e.category)}">${info ? info.icon : ""} ${e.category}</span>
+          <span class="time">${fmtTime(e.timestamp)}</span>
+        </div>
+        <div class="status-badge" style="color:${e.status === 'تم' ? '#4A9B8E' : '#E8A33D'}; border-color:${e.status === 'تم' ? '#4A9B8E' : '#E8A33D'}">
+          ${e.status === "تم" ? "تم" : "جاري"}
+        </div>
+      </div>
+      <div class="card-body">${e.note}</div>
+      <div class="card-actions">
+        <button class="action-btn ${e.status === 'تم' ? 'done' : ''}" data-action="toggle" data-id="${e.id}">
+          ${e.status === "تم" ? "✓ تم الإنجاز" : "○ علّم كمنجز"}
+        </button>
+        <button class="action-btn delete" data-action="delete" data-id="${e.id}">🗑 حذف</button>
+      </div>
+    `;
+    list.appendChild(card);
+  });
+
+  list.querySelectorAll('[data-action="toggle"]').forEach(btn => {
+    btn.onclick = () => {
+      const id = btn.dataset.id;
+      entries = entries.map(e => e.id === id ? { ...e, status: e.status === "جاري" ? "تم" : "جاري" } : e);
+      save();
+    };
+  });
+  list.querySelectorAll('[data-action="delete"]').forEach(btn => {
+    btn.onclick = () => {
+      const id = btn.dataset.id;
+      if (!confirm("متأكد من الحذف؟")) return;
+      entries = entries.filter(e => e.id !== id);
+      save();
+    };
+  });
+}
+
+document.getElementById("saveBtn").onclick = () => {
+  const input = document.getElementById("noteInput");
+  const text = input.value.trim();
+  if (!text) return;
+  entries = [{ id: Date.now().toString(), timestamp: Date.now(), category, note: text, status: "جاري" }, ...entries];
+  input.value = "";
+  save();
+};
+
+document.getElementById("filterStatus").onchange = (e) => { filterStatus = e.target.value; render(); };
+document.getElementById("dateFrom").onchange = render;
+document.getElementById("dateTo").onchange = render;
+
+document.getElementById("exportBtn").onclick = () => {
+  const blob = new Blob([JSON.stringify(entries, null, 2)], { type: "application/json" });
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement("a");
+  a.href = url;
+  a.download = "daily-log-backup-" + new Date().toISOString().slice(0,10) + ".json";
+  document.body.appendChild(a);
+  a.click();
+  a.remove();
+  URL.revokeObjectURL(url);
+};
+
+// ---------------- Speech recognition (with permission + auto-recovery) ----------------
+const micBtn = document.getElementById("micBtn");
+const micStatus = document.getElementById("micStatus");
+const SR = window.SpeechRecognition || window.webkitSpeechRecognition;
+
+function setStatus(text, kind) {
+  micStatus.textContent = text;
+  micStatus.className = "mic-status" + (kind ? " " + kind : "");
+}
+
+const isIOS = /iPad|iPhone|iPod/.test(navigator.userAgent) && !window.MSStream;
+
+if (!SR) {
+  if (isIOS) {
+    setStatus("كروم على آيفون مش بيدعم التسجيل الصوتي خالص (قيد من آبل). افتح نفس اللينك من Safari بدل كروم.", "error");
+  } else {
+    setStatus("التسجيل الصوتي مش مدعوم في المتصفح ده — جرب Chrome أو Edge.", "error");
+  }
+  micBtn.disabled = true;
+} else if (!window.isSecureContext) {
+  setStatus("المايك محتاج الموقع يكون شغال على HTTPS (زي Netlify).", "error");
+  micBtn.disabled = true;
+} else {
+  function buildRecognition() {
+    const r = new SR();
+    r.lang = "ar-EG";
+    // continuous:true is known to cut off silently on iOS Safari. Using
+    // continuous:false + auto-restart on "onend" (below) works reliably
+    // on both iOS Safari and Android Chrome.
+    r.continuous = false;
+    r.interimResults = true;
+
+    r.onstart = () => setStatus("بيسمع دلوقتي... اتكلم", "ok");
+
+    r.onresult = (event) => {
+      let finalTranscript = "";
+      for (let i = event.resultIndex; i < event.results.length; i++) {
+        if (event.results[i].isFinal) finalTranscript += event.results[i][0].transcript;
+      }
+      if (finalTranscript) {
+        const input = document.getElementById("noteInput");
+        input.value = input.value ? input.value + " " + finalTranscript : finalTranscript;
+      }
+    };
+
+    r.onerror = (event) => {
+      let msg = "حصل خطأ في التسجيل، جرب تاني.";
+      if (event.error === "not-allowed" || event.error === "service-not-allowed") {
+        msg = "تم رفض إذن الميكروفون. افتح إعدادات الموقع في Chrome (أيقونة القفل بجانب اللينك) وفعّل الميكروفون.";
+        userStoppedManually = true;
+      } else if (event.error === "no-speech") {
+        msg = "مسمعتش صوت. جرب تاني وأنت أقرب للمايك.";
+      } else if (event.error === "network") {
+        msg = "في مشكلة في الاتصال بالنت أثناء التحويل الصوتي.";
+      }
+      setStatus(msg, "error");
+    };
+
+    r.onend = () => {
+      micBtn.classList.remove("listening");
+      micBtn.textContent = "🎙️";
+      if (listening && !userStoppedManually) {
+        // mobile Chrome sometimes stops after a pause — auto-restart if user didn't press stop
+        try { recognition = buildRecognition(); recognition.start(); micBtn.classList.add("listening"); micBtn.textContent = "⏹️"; }
+        catch (e) { listening = false; setStatus("توقف التسجيل.", ""); }
+      } else {
+        listening = false;
+        setStatus("اضغط على المايك للتسجيل", "");
+      }
+    };
+    return r;
+  }
+
+  micBtn.onclick = async () => {
+    if (listening) {
+      userStoppedManually = true;
+      listening = false;
+      if (recognition) recognition.stop();
+      micBtn.classList.remove("listening");
+      micBtn.textContent = "🎙️";
+      setStatus("اضغط على المايك للتسجيل", "");
+      return;
+    }
+
+    setStatus("بيطلب إذن الميكروفون...", "");
+    try {
+      // Explicitly request mic permission first — makes failures visible instead of silent
+      const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
+      stream.getTracks().forEach(t => t.stop());
+    } catch (err) {
+      setStatus("تم رفض إذن الميكروفون أو مش متاح. افتح إعدادات الموقع في Chrome وفعّله.", "error");
+      return;
+    }
+
+    userStoppedManually = false;
+    listening = true;
+    recognition = buildRecognition();
+    try {
+      recognition.start();
+      micBtn.classList.add("listening");
+      micBtn.textContent = "⏹️";
+    } catch (e) {
+      listening = false;
+      setStatus("مقدرش يبدأ التسجيل، جرب تاني.", "error");
+    }
+  };
+}
+
+// Register service worker for offline shell caching
+if ("serviceWorker" in navigator) {
+  window.addEventListener("load", () => {
+    navigator.serviceWorker.register("sw.js").catch(() => {});
+  });
+}
+
+renderCatTabs();
+renderFilterTabs();
+render();
+</script>
+</body>
+</html>
